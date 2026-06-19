@@ -1,0 +1,397 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/models/document_model.dart';
+import '../../core/models/vsuite_instance.dart';
+import '../../core/providers/document_provider.dart';
+import '../../core/providers/instance_provider.dart';
+
+class DocumentDetailScreen extends StatefulWidget {
+  final DocumentModel  doc;
+  final VsuiteInstance instance;
+  const DocumentDetailScreen({super.key, required this.doc, required this.instance});
+
+  @override
+  State<DocumentDetailScreen> createState() => _DocumentDetailScreenState();
+}
+
+class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
+  DocumentModel? _doc;
+  bool _loadingDetail = false;
+  bool _acting        = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _doc = widget.doc;
+    _fetchDetail();
+  }
+
+  Future<void> _fetchDetail() async {
+    setState(() => _loadingDetail = true);
+    final inst  = context.read<InstanceProvider>();
+    final docs  = context.read<DocumentProvider>();
+    final token = await inst.getToken(widget.instance);
+    if (token != null) {
+      final full = await docs.fetchDocument(widget.instance, token, widget.doc.id);
+      if (full != null && mounted) setState(() => _doc = full);
+    }
+    if (mounted) setState(() => _loadingDetail = false);
+  }
+
+  Future<String?> _getToken() async =>
+      context.read<InstanceProvider>().getToken(widget.instance);
+
+  Future<void> _act(Future<Map<String, dynamic>> Function(String token) action) async {
+    setState(() => _acting = true);
+    final token = await _getToken();
+    if (token == null) {
+      _toast('Authentication failed', isError: true);
+      setState(() => _acting = false);
+      return;
+    }
+    final result = await action(token);
+    setState(() => _acting = false);
+    _toast(result['message'] ?? 'Done', isError: result['success'] != true);
+    if (result['success'] == true) {
+      await _fetchDetail();
+      // Invalidate dashboard cache
+    }
+  }
+
+  void _toast(String msg, {bool isError = false}) {
+    Fluttertoast.showToast(
+      msg: msg,
+      backgroundColor: isError ? AppColors.danger : AppColors.success,
+      textColor: Colors.white,
+      toastLength: Toast.LENGTH_LONG,
+    );
+  }
+
+  // ── Action sheets ─────────────────────────────────────────────────────────
+
+  void _showApproveSheet() {
+    final msgCtl   = TextEditingController();
+    final recCtl   = TextEditingController(text: _doc?.recommendedAmount?.toString() ?? '');
+    final sanCtl   = TextEditingController(text: _doc?.sanctionedAmount?.toString() ?? '');
+    String? finHead;
+    final isPayment = (_doc?.isPaymentInvolved ?? '') == 'Y';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: StatefulBuilder(
+          builder: (ctx, setSt) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Approve Document', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            const Divider(height: 20),
+            if (isPayment) ...[
+              Row(children: [
+                Expanded(child: TextField(controller: recCtl, keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Recommended (₹)', isDense: true))),
+                const SizedBox(width: 12),
+                Expanded(child: TextField(controller: sanCtl, keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Sanctioned (₹)', isDense: true))),
+              ]),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Finance Head (optional)', isDense: true),
+                value: finHead,
+                items: const [
+                  DropdownMenuItem(value: null,                          child: Text('— System decides —')),
+                  DropdownMenuItem(value: 'Finance Head Salem',         child: Text('Finance Head Salem')),
+                  DropdownMenuItem(value: 'Finance Head Chennai',       child: Text('Finance Head Chennai')),
+                  DropdownMenuItem(value: 'Finance Head Karaikal',      child: Text('Finance Head Karaikal')),
+                  DropdownMenuItem(value: 'Finance Head Pondy',         child: Text('Finance Head Pondy')),
+                ],
+                onChanged: (v) => setSt(() => finHead = v),
+              ),
+              const SizedBox(height: 14),
+            ],
+            TextField(controller: msgCtl, decoration: const InputDecoration(labelText: 'Remarks (optional)', isDense: true), maxLines: 2),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                final payload = <String, dynamic>{};
+                if (msgCtl.text.isNotEmpty) payload['message'] = msgCtl.text;
+                if (finHead != null) payload['finance_head'] = finHead;
+                if (recCtl.text.isNotEmpty) payload['recommended_amount'] = double.tryParse(recCtl.text);
+                if (sanCtl.text.isNotEmpty) payload['sanctioned_amount']  = double.tryParse(sanCtl.text);
+                _act((token) => context.read<DocumentProvider>().approve(widget.instance, token, widget.doc.id, payload));
+              },
+              icon: const Icon(Icons.check),
+              label: const Text('Confirm Approve'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            ),
+            const SizedBox(height: 16),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _showRejectSheet()  => _showReasonSheet('Reject Document',  AppColors.danger,  'Rejection reason (required)',
+      (token, msg) => context.read<DocumentProvider>().reject(widget.instance, token, widget.doc.id, msg), required: true);
+
+  void _showHoldSheet()    => _showReasonSheet('Put on Hold',      AppColors.warning, 'Hold reason (required)',
+      (token, msg) => context.read<DocumentProvider>().hold(widget.instance, token, widget.doc.id, msg), required: true);
+
+  void _showCommentSheet() => _showReasonSheet('Add Comment',      AppColors.accent,  'Write a comment…',
+      (token, msg) => context.read<DocumentProvider>().comment(widget.instance, token, widget.doc.id, msg));
+
+  void _showReasonSheet(String title, Color color, String hint,
+      Future<Map<String, dynamic>> Function(String, String) action, {bool required = false}) {
+    final ctl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          const Divider(height: 20),
+          TextField(controller: ctl, maxLines: 3, decoration: InputDecoration(hintText: hint)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: color),
+            onPressed: () {
+              if (required && ctl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              _act((token) => action(token, ctl.text.trim()));
+            },
+            child: Text(title),
+          ),
+          const SizedBox(height: 16),
+        ]),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final doc = _doc ?? widget.doc;
+
+    return Scaffold(
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [AppColors.primaryDark, AppColors.primary]),
+          ),
+        ),
+        title: Text(doc.docId ?? 'Document', style: const TextStyle(fontSize: 15)),
+        actions: [
+          if (_loadingDetail) const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchDetail),
+        ],
+      ),
+      body: Stack(children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // ── Header card ─────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppColors.primaryDark, AppColors.primary]),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  _pill(doc.docId ?? '—'),
+                  const SizedBox(width: 8),
+                  _statusPill(doc.status),
+                  const Spacer(),
+                  _priorityPill(doc.priority),
+                ]),
+                const SizedBox(height: 10),
+                Text(doc.title ?? 'Untitled', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text('From: ${doc.from ?? '—'}  ·  By: ${doc.createdBy ?? '—'}', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                if (doc.createdAt != null)
+                  Text(DateFormat('dd MMM yyyy').format(doc.createdAt!), style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11)),
+              ]),
+            ),
+            const SizedBox(height: 14),
+            // ── Progress ─────────────────────────────────────────────────
+            _card('Approval Progress', [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('${doc.approvalProgressPct}% Complete', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text('Step ${doc.currentSequenceIndex}/${doc.approvalSequence.length}',
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              ]),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: doc.approvalProgressPct / 100,
+                backgroundColor: AppColors.border,
+                color: AppColors.accent,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              const SizedBox(height: 12),
+              ...doc.approvalSequence.asMap().entries.map((e) {
+                final idx  = e.key;
+                final step = e.value;
+                final done = idx < doc.currentSequenceIndex;
+                final curr = idx == doc.currentSequenceIndex;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor: done ? AppColors.success : curr ? AppColors.accent : AppColors.border,
+                      child: done
+                          ? const Icon(Icons.check, color: Colors.white, size: 14)
+                          : curr
+                              ? const Icon(Icons.access_time, color: Colors.white, size: 13)
+                              : Text('${idx + 1}', style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(step, style: TextStyle(fontWeight: curr ? FontWeight.w700 : FontWeight.normal,
+                        color: done ? AppColors.success : curr ? AppColors.accent : AppColors.textMuted))),
+                    if (curr) const Text('← Current', style: TextStyle(fontSize: 10, color: AppColors.accent)),
+                  ]),
+                );
+              }),
+            ]),
+            const SizedBox(height: 14),
+            // ── Subject & description ────────────────────────────────────
+            if (doc.subject != null) ...[
+              _card('Subject', [Text(doc.subject!, style: const TextStyle(fontSize: 14))]),
+              const SizedBox(height: 14),
+            ],
+            // ── Financial ────────────────────────────────────────────────
+            if (doc.isPaymentInvolved == 'Y')
+              _card('Financial Details', [
+                Row(children: [
+                  Expanded(child: _finStat('Requested', doc.amount)),
+                  Expanded(child: _finStat('Recommended', doc.recommendedAmount, color: AppColors.info)),
+                  Expanded(child: _finStat('Sanctioned', doc.sanctionedAmount, color: AppColors.success)),
+                ]),
+              ]),
+            if (doc.isPaymentInvolved == 'Y') const SizedBox(height: 14),
+            // ── Approval log ─────────────────────────────────────────────
+            if (doc.approvalLog.isNotEmpty)
+              _card('Approval History', [
+                ...doc.approvalLog.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 5, right: 10),
+                        decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(e.action ?? '—', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      if (e.message != null && e.message!.isNotEmpty)
+                        Text('"${e.message}"', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: AppColors.textMuted)),
+                      Text(
+                        '${e.byName ?? '—'} · ${e.byDept ?? ''}  ${e.createdAt != null ? DateFormat('dd MMM yy, hh:mm a').format(e.createdAt!.toLocal()) : ''}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      ),
+                    ])),
+                  ]),
+                )),
+              ]),
+            const SizedBox(height: 100), // space for action bar
+          ]),
+        ),
+        // ── Floating action bar ────────────────────────────────────────────
+        if (doc.isAtChairmanStage && !['Completed', 'Closed', 'Rejected'].contains(doc.status))
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 16, offset: const Offset(0, -4))],
+              ),
+              child: _acting
+                  ? const Center(child: CircularProgressIndicator())
+                  : Row(children: [
+                      Expanded(child: _actionBtn('Approve', AppColors.success, Icons.check, _showApproveSheet)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _actionBtn('Hold',    AppColors.warning, Icons.pause, _showHoldSheet)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _actionBtn('Reject',  AppColors.danger,  Icons.close, _showRejectSheet)),
+                    ]),
+            ),
+          ),
+        // Comment button (always visible)
+        if (!['Completed', 'Closed'].contains(doc.status))
+          Positioned(
+            bottom: doc.isAtChairmanStage ? 90 : 16,
+            right: 16,
+            child: FloatingActionButton.small(
+              onPressed: _showCommentSheet,
+              backgroundColor: AppColors.accent,
+              child: const Icon(Icons.comment_outlined, color: Colors.white),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  Widget _card(String title, List<Widget> children) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+          textBaseline: TextBaseline.alphabetic, letterSpacing: 0.5, color: AppColors.accent)),
+      const SizedBox(height: 12),
+      ...children,
+    ]),
+  );
+
+  Widget _finStat(String label, double? value, {Color color = AppColors.textDark}) => Column(children: [
+    Text(value != null ? '₹${NumberFormat('#,##,###').format(value)}' : '—',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+    Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+  ]);
+
+  Widget _pill(String text) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+    child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+  );
+
+  Widget _statusPill(String? status) {
+    Color bg; String label = status ?? '—';
+    if ((status ?? '').contains('Reject')) bg = AppColors.danger.withOpacity(0.3);
+    else if ((status ?? '').contains('Complet')) bg = AppColors.success.withOpacity(0.3);
+    else if ((status ?? '').contains('Hold')) bg = AppColors.warning.withOpacity(0.3);
+    else bg = Colors.white.withOpacity(0.15);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+    );
+  }
+
+  Widget _priorityPill(String? p) {
+    Color bg;
+    switch ((p ?? '').toLowerCase()) {
+      case 'high': case 'urgent': bg = AppColors.danger; break;
+      case 'medium': case 'normal': bg = AppColors.warning; break;
+      default: bg = AppColors.success;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(p ?? 'Normal', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _actionBtn(String label, Color color, IconData icon, VoidCallback onTap) =>
+    ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
+      style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(vertical: 11)),
+    );
+}

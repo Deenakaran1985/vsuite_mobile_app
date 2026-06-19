@@ -31,7 +31,7 @@ class InstanceManagerScreen extends StatelessWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: instances.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (ctx, idx) {
                 final inst = instances[idx];
                 final isActive = idx == provider.activeIndex;

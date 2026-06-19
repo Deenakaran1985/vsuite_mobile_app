@@ -9,7 +9,7 @@ class InstanceProvider extends ChangeNotifier {
 
   List<VsuiteInstance> _instances = [];
   int _activeIndex = 0;
-  bool _loading = false;
+  final bool _loading = false;
 
   InstanceProvider(this._store, this._api);
 

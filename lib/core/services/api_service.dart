@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/document_model.dart';
 import '../models/vsuite_instance.dart';
 import 'storage_service.dart';
@@ -108,5 +109,5 @@ class ApiService {
   }
 
   String _trimUrl(String url) => url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-  void _log(String tag, Object e) => print('[ApiService] $tag: $e');
+  void _log(String tag, Object e) => debugPrint('[ApiService] $tag: $e');
 }

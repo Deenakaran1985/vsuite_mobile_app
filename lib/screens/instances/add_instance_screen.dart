@@ -122,7 +122,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                 Text(
                   isEdit ? 'Update connection details' : 'Connect your Chairman account',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 13),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 13),
                 ),
                 const SizedBox(height: 32),
                 Card(

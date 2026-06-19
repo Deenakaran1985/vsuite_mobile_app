@@ -100,7 +100,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Finance Head (optional)', isDense: true),
-                value: finHead,
+                initialValue: finHead,
                 items: const [
                   DropdownMenuItem(value: null,                          child: Text('— System decides —')),
                   DropdownMenuItem(value: 'Finance Head Salem',         child: Text('Finance Head Salem')),
@@ -214,9 +214,9 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 const SizedBox(height: 10),
                 Text(doc.title ?? 'Untitled', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('From: ${doc.from ?? '—'}  ·  By: ${doc.createdBy ?? '—'}', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                Text('From: ${doc.from ?? '—'}  ·  By: ${doc.createdBy ?? '—'}', style: TextStyle(color: Colors.white.withValues(alpha:0.7), fontSize: 12)),
                 if (doc.createdAt != null)
-                  Text(DateFormat('dd MMM yyyy').format(doc.createdAt!), style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11)),
+                  Text(DateFormat('dd MMM yyyy').format(doc.createdAt!), style: TextStyle(color: Colors.white.withValues(alpha:0.6), fontSize: 11)),
               ]),
             ),
             const SizedBox(height: 14),
@@ -308,7 +308,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 16, offset: const Offset(0, -4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.1), blurRadius: 16, offset: const Offset(0, -4))],
               ),
               child: _acting
                   ? const Center(child: CircularProgressIndicator())
@@ -339,7 +339,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Widget _card(String title, List<Widget> children) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 8, offset: const Offset(0, 2))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
           textBaseline: TextBaseline.alphabetic, letterSpacing: 0.5, color: AppColors.accent)),
@@ -356,16 +356,16 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
   Widget _pill(String text) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+    decoration: BoxDecoration(color: Colors.white.withValues(alpha:0.2), borderRadius: BorderRadius.circular(20)),
     child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
   );
 
   Widget _statusPill(String? status) {
     Color bg; String label = status ?? '—';
-    if ((status ?? '').contains('Reject')) bg = AppColors.danger.withOpacity(0.3);
-    else if ((status ?? '').contains('Complet')) bg = AppColors.success.withOpacity(0.3);
-    else if ((status ?? '').contains('Hold')) bg = AppColors.warning.withOpacity(0.3);
-    else bg = Colors.white.withOpacity(0.15);
+    if ((status ?? '').contains('Reject')) { bg = AppColors.danger.withValues(alpha: 0.3); }
+    else if ((status ?? '').contains('Complet')) { bg = AppColors.success.withValues(alpha: 0.3); }
+    else if ((status ?? '').contains('Hold')) { bg = AppColors.warning.withValues(alpha: 0.3); }
+    else { bg = Colors.white.withValues(alpha: 0.15); }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),

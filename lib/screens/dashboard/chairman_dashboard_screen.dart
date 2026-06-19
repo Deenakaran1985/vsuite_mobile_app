@@ -212,7 +212,7 @@ class _InstanceTab extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
-                Expanded(child: _StatCard('Pending', ds.pendingCount, AppColors.warning, Icons.hourglass_half)),
+                Expanded(child: _StatCard('Pending', ds.pendingCount, AppColors.warning, Icons.hourglass_empty)),
                 const SizedBox(width: 12),
                 Expanded(child: _StatCard('Approved', ds.approvedCount, AppColors.success, Icons.check_circle_outline)),
                 const SizedBox(width: 12),
@@ -275,7 +275,7 @@ class _StatCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))],
     ),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, color: color, size: 22),
@@ -300,8 +300,8 @@ class _DocTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: urgent ? const Color(0xFFFFF9F0) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: urgent ? AppColors.warning.withOpacity(0.4) : AppColors.border),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        border: Border.all(color: urgent ? AppColors.warning.withValues(alpha: 0.4) : AppColors.border),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -327,7 +327,7 @@ class _DocTile extends StatelessWidget {
             if (!isCompleted)
               _chip('${doc.daysPending}d', urgent ? AppColors.danger : AppColors.success, Colors.white),
             if (isCompleted && doc.status != null)
-              _chip(doc.status!, AppColors.success.withOpacity(0.15), AppColors.success),
+              _chip(doc.status!, AppColors.success.withValues(alpha: 0.15), AppColors.success),
           ]),
         ),
         trailing: isCompleted

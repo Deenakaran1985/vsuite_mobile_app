@@ -136,7 +136,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                         children: [
                           _field(_labelCtl, 'Instance Name', 'e.g. VIMS-V-Suite', Icons.label_outline),
                           const SizedBox(height: 14),
-                          _field(_urlCtl, 'Server URL', 'http://192.168.32.249:8101', Icons.link,
+                          _field(_urlCtl, 'Server URL', 'http://14.139.184.39:8101', Icons.link,
                               keyboardType: TextInputType.url),
                           const SizedBox(height: 14),
                           _field(_emailCtl, 'Chairman Email', 'chancellor@example.com', Icons.email_outlined,

@@ -120,7 +120,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  isEdit ? 'Update connection details' : 'Connect your Chairman account',
+                  isEdit ? 'Update connection details' : 'Connect your VSuite account',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 13),
                 ),
@@ -139,7 +139,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                           _field(_urlCtl, 'Server URL', 'http://14.139.184.39:8101', Icons.link,
                               keyboardType: TextInputType.url),
                           const SizedBox(height: 14),
-                          _field(_emailCtl, 'Chairman Email', 'chancellor@example.com', Icons.email_outlined,
+                          _field(_emailCtl, 'Email', 'you@example.com', Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress),
                           const SizedBox(height: 14),
                           TextFormField(

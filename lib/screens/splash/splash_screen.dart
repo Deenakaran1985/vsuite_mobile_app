@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               ),
               const SizedBox(height: 6),
               Text(
-                'Chairman Approval Portal',
+                'Document Approval Portal',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, letterSpacing: 0.5),
               ),
               const SizedBox(height: 48),

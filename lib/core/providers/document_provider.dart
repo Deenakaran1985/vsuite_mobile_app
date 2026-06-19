@@ -23,7 +23,7 @@ class InstanceDocState {
   int get pendingCount   => pending.length;
   int get completedCount => completed.length;
   int get approvedCount  => completed.where((d) =>
-      (d.approvalStatus ?? '').contains('Approved by Chairman')).length;
+      (d.approvalStatus ?? '').toLowerCase().contains('approved')).length;
 }
 
 class DocumentProvider extends ChangeNotifier {

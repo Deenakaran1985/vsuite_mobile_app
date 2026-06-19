@@ -116,7 +116,7 @@ class _ChairmanDashboardScreenState extends State<ChairmanDashboardScreen>
             child: Image.asset('assets/images/logo1.jpg', width: 28, height: 28, fit: BoxFit.cover),
           ),
           const SizedBox(width: 10),
-          const Text('Chairman Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const Text('VSuite Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         ]),
         actions: [
           IconButton(

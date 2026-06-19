@@ -88,9 +88,12 @@ class DocumentModel {
 
   int get daysPending => createdAt != null ? DateTime.now().difference(createdAt!).inDays : 0;
 
+  // True when the document is not in a terminal state — i.e. the current user
+  // can still act on it (approve / reject / hold / comment).
   bool get isAtChairmanStage {
-    const chairmanDepts = ['Chairman', 'Chancellor', 'Chancellor Office'];
-    return chairmanDepts.contains(currentApprover);
+    const terminal = ['Completed', 'Closed', 'Rejected', 'Fully Approved'];
+    return !isFullyApproved &&
+        !terminal.any((s) => (status ?? '').toLowerCase().contains(s.toLowerCase()));
   }
 }
 

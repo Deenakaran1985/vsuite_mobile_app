@@ -28,5 +28,6 @@ flutter:
 
   assets:
     - assets/images/logo.jpg
+    - assets/images/logo1.jpg
     - assets/images/vmrfdu.jpg
     - assets/images/icon.jpg

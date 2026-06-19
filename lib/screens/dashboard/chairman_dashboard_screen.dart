@@ -113,7 +113,7 @@ class _ChairmanDashboardScreenState extends State<ChairmanDashboardScreen>
         title: Row(children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: Image.asset('assets/images/logo.jpg', width: 28, height: 28, fit: BoxFit.cover),
+            child: Image.asset('assets/images/logo1.jpg', width: 28, height: 28, fit: BoxFit.cover),
           ),
           const SizedBox(width: 10),
           const Text('Chairman Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),

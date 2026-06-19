@@ -110,7 +110,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                 Center(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: Image.asset('assets/images/logo.jpg', width: 72, height: 72, fit: BoxFit.cover),
+                    child: Image.asset('assets/images/logo1.jpg', width: 72, height: 72, fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(height: 16),

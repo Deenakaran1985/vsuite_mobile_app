@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -51,12 +52,25 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS (debug)
-        run: flutter build ios --debug --no-codesign
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods || true
+
+      - name: Install iOS Pods
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Build iOS (simulator)
+        run: flutter build ios --debug --no-codesign --simulator
+
+      - name: Zip iOS app
+        run: |
+          cd build/ios/Debug-iphonesimulator
+          zip -r ../../../../vsuite-ios-debug.zip Runner.app
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
         with:
           name: vsuite-ios-debug
-          path: build/ios/Debug-iphonesimulator/Runner.app
+          path: vsuite-ios-debug.zip
           retention-days: 30

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/instance_provider.dart';
+import '../../core/services/biometric_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,6 +14,9 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double>   _fade;
+  final _bio = BiometricService();
+  bool _bioRequired = false;
+  bool _bioFailed   = false;
 
   @override
   void initState() {
@@ -24,15 +28,34 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigate() async {
+    final provider = context.read<InstanceProvider>();
+    final nav      = Navigator.of(context);
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-    final provider = context.read<InstanceProvider>();
     await provider.init();
     if (!mounted) return;
-    if (provider.hasInstances) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+    if (!provider.hasInstances) {
+      nav.pushReplacementNamed('/add-instance');
+      return;
+    }
+    final enabled   = await _bio.isEnabled();
+    final available = enabled ? await _bio.isAvailable() : false;
+    if (enabled && available) {
+      setState(() => _bioRequired = true);
+      await _tryBiometric(nav);
     } else {
-      Navigator.pushReplacementNamed(context, '/add-instance');
+      nav.pushReplacementNamed('/dashboard');
+    }
+  }
+
+  Future<void> _tryBiometric(NavigatorState nav) async {
+    setState(() => _bioFailed = false);
+    final ok = await _bio.authenticate(reason: 'Verify your identity to open VSuite');
+    if (!mounted) return;
+    if (ok) {
+      nav.pushReplacementNamed('/dashboard');
+    } else {
+      setState(() => _bioFailed = true);
     }
   }
 
@@ -73,11 +96,38 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, letterSpacing: 0.5),
               ),
               const SizedBox(height: 48),
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
-              ),
+              if (!_bioRequired)
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+                )
+              else ...[
+                Icon(
+                  Icons.fingerprint,
+                  color: _bioFailed ? Colors.redAccent : Colors.white70,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _bioFailed ? 'Authentication failed. Try again.' : 'Verify your identity',
+                  style: TextStyle(
+                    color: _bioFailed ? Colors.redAccent : Colors.white70,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () => _tryBiometric(Navigator.of(context)),
+                  icon: const Icon(Icons.fingerprint),
+                  label: const Text('Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

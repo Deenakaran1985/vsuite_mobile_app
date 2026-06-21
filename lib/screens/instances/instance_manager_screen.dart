@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/instance_provider.dart';
 import '../../core/services/biometric_service.dart';
+import '../../core/services/pin_service.dart';
+import '../auth/pin_setup_screen.dart';
 import 'add_instance_screen.dart';
 
 class InstanceManagerScreen extends StatefulWidget {
@@ -14,25 +16,29 @@ class InstanceManagerScreen extends StatefulWidget {
 
 class _InstanceManagerScreenState extends State<InstanceManagerScreen> {
   final _bio = BiometricService();
+  final _pin = PinService();
   bool _bioEnabled   = false;
   bool _bioAvailable = false;
   String _bioLabel   = 'Biometrics';
+  bool _pinEnabled   = false;
 
   @override
   void initState() {
     super.initState();
-    _loadBioState();
+    _loadSecurityState();
   }
 
-  Future<void> _loadBioState() async {
-    final enabled   = await _bio.isEnabled();
-    final available = await _bio.isAvailable();
-    final label     = await _bio.biometricLabel();
+  Future<void> _loadSecurityState() async {
+    final bioEnabled   = await _bio.isEnabled();
+    final bioAvailable = await _bio.isAvailable();
+    final bioLabel     = await _bio.biometricLabel();
+    final pinEnabled   = await _pin.hasPin();
     if (mounted) {
       setState(() {
-        _bioEnabled   = enabled;
-        _bioAvailable = available;
-        _bioLabel     = label;
+        _bioEnabled   = bioEnabled;
+        _bioAvailable = bioAvailable;
+        _bioLabel     = bioLabel;
+        _pinEnabled   = pinEnabled;
       });
     }
   }
@@ -140,6 +146,7 @@ class _InstanceManagerScreenState extends State<InstanceManagerScreen> {
                     },
                   ),
           ),
+          _pinTile(),
           if (_bioAvailable) _bioTile(),
         ],
       ),
@@ -154,6 +161,69 @@ class _InstanceManagerScreenState extends State<InstanceManagerScreen> {
       ),
     );
   }
+
+  Future<void> _openPinSetup() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+    );
+    if (result == true && mounted) setState(() => _pinEnabled = true);
+  }
+
+  Future<void> _removePin() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove PIN'),
+        content: const Text('Are you sure you want to disable PIN lock?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _pin.clearPin();
+      if (mounted) setState(() => _pinEnabled = false);
+    }
+  }
+
+  Widget _pinTile() => Container(
+    decoration: BoxDecoration(
+      border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+    ),
+    child: ListTile(
+      leading: Icon(
+        Icons.pin_outlined,
+        color: _pinEnabled ? AppColors.accent : AppColors.textMuted,
+      ),
+      title: const Text('PIN Lock'),
+      subtitle: Text(
+        _pinEnabled ? 'PIN is active — tap to change or remove' : 'Add a 4-digit PIN to secure the app',
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: _pinEnabled
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton(onPressed: _openPinSetup, child: const Text('Change')),
+                TextButton(
+                  onPressed: _removePin,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                  child: const Text('Remove'),
+                ),
+              ],
+            )
+          : TextButton(
+              onPressed: _openPinSetup,
+              child: const Text('Set PIN'),
+            ),
+    ),
+  );
 
   Widget _bioTile() => Container(
     decoration: BoxDecoration(

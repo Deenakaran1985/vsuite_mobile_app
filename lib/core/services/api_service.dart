@@ -56,6 +56,62 @@ class ApiService {
     await _store.deleteToken(instance.id);
   }
 
+  // ── Device / Push-notification tokens ─────────────────────────────────────
+
+  Future<void> registerDeviceToken({
+    required String serverUrl,
+    required String bearerToken,
+    required String fcmToken,
+    String platform = 'android',
+  }) async {
+    try {
+      await _dio.post(
+        '${_trimUrl(serverUrl)}/api/v1/device-token',
+        data: {'fcm_token': fcmToken, 'platform': platform},
+        options: Options(headers: {'Authorization': 'Bearer $bearerToken', 'Accept': 'application/json'}),
+      );
+    } on DioException catch (e) {
+      _log('registerDeviceToken', e);
+    }
+  }
+
+  Future<void> removeDeviceToken({
+    required String serverUrl,
+    required String bearerToken,
+    required String fcmToken,
+  }) async {
+    try {
+      await _dio.delete(
+        '${_trimUrl(serverUrl)}/api/v1/device-token',
+        data: {'fcm_token': fcmToken},
+        options: Options(headers: {'Authorization': 'Bearer $bearerToken', 'Accept': 'application/json'}),
+      );
+    } on DioException catch (e) {
+      _log('removeDeviceToken', e);
+    }
+  }
+
+  // ── Mobile auth login (vmrfdu-vsuite hub) ─────────────────────────────────
+
+  Future<Map<String, dynamic>> mobileLogin({
+    required String serverUrl,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '${_trimUrl(serverUrl)}/api/v1/auth/login',
+        data: {'email': email, 'password': password},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      return res.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _log('mobileLogin', e);
+      final msg = e.response?.data?['message'] as String? ?? 'Login failed';
+      return {'success': false, 'message': msg};
+    }
+  }
+
   // ── Documents ─────────────────────────────────────────────────────────────
 
   Future<List<DocumentModel>> getPendingDocuments(VsuiteInstance instance, String token) async {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/instance_provider.dart';
 import '../../core/services/biometric_service.dart';
+import '../../core/services/pin_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,6 +16,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _ctrl;
   late Animation<double>   _fade;
   final _bio = BiometricService();
+  final _pin = PinService();
   bool _bioRequired = false;
   bool _bioFailed   = false;
 
@@ -38,6 +40,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       nav.pushReplacementNamed('/add-instance');
       return;
     }
+
+    // PIN takes priority — PinLockScreen also handles biometric internally
+    final pinSet = await _pin.hasPin();
+    if (!mounted) return;
+    if (pinSet) {
+      nav.pushReplacementNamed('/pin-lock');
+      return;
+    }
+
+    // Biometric-only (no PIN set)
     final enabled   = await _bio.isEnabled();
     final available = enabled ? await _bio.isAvailable() : false;
     if (enabled && available) {

@@ -10,6 +10,24 @@ class ApiService {
 
   ApiService(this._store);
 
+  // ── Server discovery: fetch configured instances from vmrfdu-vsuite ──────
+
+  Future<List<Map<String, dynamic>>> fetchServerInstances(String serverUrl) async {
+    try {
+      final res = await _dio.get(
+        '${_trimUrl(serverUrl)}/api/v1/instances',
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['success'] == true) {
+        return List<Map<String, dynamic>>.from(data['instances'] as List);
+      }
+    } on DioException catch (e) {
+      _log('fetchServerInstances', e);
+    }
+    return [];
+  }
+
   // ── Cross-auth: get/cache a Bearer token for an instance ─────────────────
 
   Future<String?> getToken(VsuiteInstance instance, String password) async {

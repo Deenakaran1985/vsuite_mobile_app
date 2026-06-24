@@ -72,6 +72,34 @@ class StorageService {
     return _storage.read(key: 'role_$instanceId');
   }
 
+  // ── VMRFDU hub session ────────────────────────────────────────────────────
+
+  Future<void> saveVmrfduToken(String token) async {
+    await _storage.write(key: 'vmrfdu_token', value: token);
+  }
+
+  Future<String?> loadVmrfduToken() async {
+    return _storage.read(key: 'vmrfdu_token');
+  }
+
+  Future<void> deleteVmrfduToken() async {
+    await _storage.delete(key: 'vmrfdu_token');
+  }
+
+  Future<void> saveVmrfduUser(Map<String, dynamic> user) async {
+    await _storage.write(key: 'vmrfdu_user', value: jsonEncode(user));
+  }
+
+  Future<Map<String, dynamic>?> loadVmrfduUser() async {
+    final raw = await _storage.read(key: 'vmrfdu_user');
+    if (raw == null) return null;
+    return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteVmrfduUser() async {
+    await _storage.delete(key: 'vmrfdu_user');
+  }
+
   // ── Wipe everything (logout) ──────────────────────────────────────────────
 
   Future<void> clearAll() async {

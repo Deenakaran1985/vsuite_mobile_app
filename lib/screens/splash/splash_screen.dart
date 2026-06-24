@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/providers/instance_provider.dart';
+import '../../core/providers/vmrfdu_provider.dart';
 import '../../core/services/biometric_service.dart';
 import '../../core/services/pin_service.dart';
 
@@ -30,14 +31,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigate() async {
-    final provider = context.read<InstanceProvider>();
-    final nav      = Navigator.of(context);
+    final instProvider   = context.read<InstanceProvider>();
+    final vmrfduProvider = context.read<VmrfduProvider>();
+    final nav            = Navigator.of(context);
+
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-    await provider.init();
+
+    // Initialise both session stores in parallel
+    await Future.wait([instProvider.init(), vmrfduProvider.init()]);
     if (!mounted) return;
-    if (!provider.hasInstances) {
-      nav.pushReplacementNamed('/add-instance');
+
+    final hasInstances  = instProvider.hasInstances;
+    final vmrfduLogged  = vmrfduProvider.isLoggedIn;
+
+    // If neither app is set up yet, go straight to selection screen
+    if (!hasInstances && !vmrfduLogged) {
+      nav.pushReplacementNamed('/select-app');
       return;
     }
 
@@ -56,7 +66,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       setState(() => _bioRequired = true);
       await _tryBiometric(nav);
     } else {
-      nav.pushReplacementNamed('/dashboard');
+      // Route to whichever app was last active
+      nav.pushReplacementNamed('/select-app');
     }
   }
 

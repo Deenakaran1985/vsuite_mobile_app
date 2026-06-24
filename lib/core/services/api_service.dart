@@ -133,6 +133,73 @@ class ApiService {
     }
   }
 
+  Future<void> mobileLogout({
+    required String serverUrl,
+    required String token,
+  }) async {
+    try {
+      await _dio.post(
+        '${_trimUrl(serverUrl)}/api/v1/auth/logout',
+        options: Options(headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'}),
+      );
+    } on DioException catch (e) {
+      _log('mobileLogout', e);
+    }
+  }
+
+  // ── VMRFDU hub — Tickets ──────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchTickets({
+    required String serverUrl,
+    required String token,
+    String tab = 'my',
+    String? status,
+    int perPage = 20,
+  }) async {
+    try {
+      final params = <String, dynamic>{'tab': tab, 'per_page': perPage};
+      if (status != null) params['status'] = status;
+      final res = await _dio.get(
+        '${_trimUrl(serverUrl)}/api/v1/tickets',
+        queryParameters: params,
+        options: Options(headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'}),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['success'] == true && data['data'] is List) {
+        return List<Map<String, dynamic>>.from(data['data'] as List);
+      }
+    } on DioException catch (e) {
+      _log('fetchTickets', e);
+    }
+    return [];
+  }
+
+  // ── VMRFDU hub — Postal ───────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchPostals({
+    required String serverUrl,
+    required String token,
+    String? type,
+    int perPage = 20,
+  }) async {
+    try {
+      final params = <String, dynamic>{'per_page': perPage};
+      if (type != null) params['type'] = type;
+      final res = await _dio.get(
+        '${_trimUrl(serverUrl)}/api/v1/postal',
+        queryParameters: params,
+        options: Options(headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'}),
+      );
+      final data = res.data as Map<String, dynamic>;
+      if (data['success'] == true && data['data'] is List) {
+        return List<Map<String, dynamic>>.from(data['data'] as List);
+      }
+    } on DioException catch (e) {
+      _log('fetchPostals', e);
+    }
+    return [];
+  }
+
   // ── Documents ─────────────────────────────────────────────────────────────
 
   Future<List<DocumentModel>> getPendingDocuments(VsuiteInstance instance, String token) async {

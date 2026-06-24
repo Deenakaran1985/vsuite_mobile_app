@@ -6,12 +6,16 @@ import 'package:provider/provider.dart';
 import 'core/constants/app_theme.dart';
 import 'core/providers/document_provider.dart';
 import 'core/providers/instance_provider.dart';
+import 'core/providers/vmrfdu_provider.dart';
 import 'core/services/api_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/storage_service.dart';
 import 'screens/auth/pin_lock_screen.dart';
+import 'screens/auth/vmrfdu_login_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'screens/home/app_selection_screen.dart';
 import 'screens/dashboard/chairman_dashboard_screen.dart';
+import 'screens/dashboard/vmrfdu_dashboard_screen.dart';
 import 'screens/instances/add_instance_screen.dart';
 import 'screens/instances/instance_manager_screen.dart';
 
@@ -39,6 +43,7 @@ class VSuiteApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => InstanceProvider(storage, api)),
         ChangeNotifierProvider(create: (_) => DocumentProvider(api)),
+        ChangeNotifierProvider(create: (_) => VmrfduProvider(storage, api)),
       ],
       child: MaterialApp(
         title: 'VSuite',
@@ -46,11 +51,19 @@ class VSuiteApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: '/',
         routes: {
-          '/':               (_) => const SplashScreen(),
-          '/pin-lock':       (_) => const PinLockScreen(destination: '/dashboard'),
-          '/dashboard':      (_) => const ChairmanDashboardScreen(),
-          '/add-instance':   (_) => const AddInstanceScreen(),
-          '/manage-instances':(_) => const InstanceManagerScreen(),
+          // ── Shared ──────────────────────────────────────────────────────
+          '/':                 (_) => const SplashScreen(),
+          '/select-app':       (_) => const AppSelectionScreen(),
+          '/pin-lock':         (_) => const PinLockScreen(destination: '/select-app'),
+
+          // ── VMRFDU hub flow ──────────────────────────────────────────────
+          '/vmrfdu-login':     (_) => const VmrfduLoginScreen(),
+          '/vmrfdu-dashboard': (_) => const VmrfduDashboardScreen(),
+
+          // ── V-Suite instance flow ────────────────────────────────────────
+          '/dashboard':        (_) => const ChairmanDashboardScreen(),
+          '/add-instance':     (_) => const AddInstanceScreen(),
+          '/manage-instances': (_) => const InstanceManagerScreen(),
         },
       ),
     );

@@ -16,6 +16,7 @@ class InstanceProvider extends ChangeNotifier {
   List<VsuiteInstance> get instances   => _instances;
   int                  get activeIndex => _activeIndex;
   bool                 get loading     => _loading;
+  ApiService           get api         => _api;
 
   VsuiteInstance? get activeInstance =>
       _instances.isEmpty ? null : _instances[_activeIndex.clamp(0, _instances.length - 1)];
@@ -78,6 +79,20 @@ class InstanceProvider extends ChangeNotifier {
 
   Future<void> invalidateToken(VsuiteInstance instance) async {
     await _api.invalidateToken(instance);
+  }
+
+  /// Stores a direct-login Bearer token and role after successful instance login.
+  Future<void> storeInstanceToken(String instanceId, String token, String role) async {
+    await _store.saveToken(instanceId, token);
+    await _store.saveRole(instanceId, role);
+    notifyListeners();
+  }
+
+  /// Returns the stored role for the active instance (defaults to 'Staff').
+  Future<String> getActiveRole() async {
+    final inst = activeInstance;
+    if (inst == null) return 'Staff';
+    return await _store.loadRole(inst.id) ?? 'Staff';
   }
 
   // ── Auth check (does any instance exist?) ─────────────────────────────────

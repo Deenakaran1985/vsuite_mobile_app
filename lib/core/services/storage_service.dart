@@ -62,6 +62,16 @@ class StorageService {
     await prefs.setInt(_keyActiveIdx, idx);
   }
 
+  // ── Role per instance ─────────────────────────────────────────────────────
+
+  Future<void> saveRole(String instanceId, String role) async {
+    await _storage.write(key: 'role_$instanceId', value: role);
+  }
+
+  Future<String?> loadRole(String instanceId) async {
+    return _storage.read(key: 'role_$instanceId');
+  }
+
   // ── Wipe everything (logout) ──────────────────────────────────────────────
 
   Future<void> clearAll() async {

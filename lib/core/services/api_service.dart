@@ -91,6 +91,27 @@ class ApiService {
     }
   }
 
+  // ── Direct instance login (v-suite) ───────────────────────────────────────
+
+  Future<Map<String, dynamic>> instanceLogin({
+    required String instanceUrl,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '${_trimUrl(instanceUrl)}/api/v1/auth/login',
+        data: {'email': email, 'password': password},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+      return res.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _log('instanceLogin', e);
+      final msg = e.response?.data?['message'] as String? ?? 'Login failed';
+      return {'success': false, 'message': msg};
+    }
+  }
+
   // ── Mobile auth login (vmrfdu-vsuite hub) ─────────────────────────────────
 
   Future<Map<String, dynamic>> mobileLogin({

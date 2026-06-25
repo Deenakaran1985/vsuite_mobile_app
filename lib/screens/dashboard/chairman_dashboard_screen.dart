@@ -6,6 +6,7 @@ import '../../core/models/document_model.dart';
 import '../../core/models/vsuite_instance.dart';
 import '../../core/providers/document_provider.dart';
 import '../../core/providers/instance_provider.dart';
+import '../auth/instance_login_screen.dart';
 import '../document/document_detail_screen.dart';
 import '../instances/instance_manager_screen.dart';
 
@@ -49,9 +50,12 @@ class _ChairmanDashboardScreenState extends State<ChairmanDashboardScreen>
     final token = await instProvider.getToken(instance);
     if (token == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Auth failed for ${instance.label}'), backgroundColor: AppColors.danger),
-        );
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (_) => InstanceLoginScreen(instance: instance),
+        ));
+        // After login, retry loading
+        _loaded.remove(instance.id);
+        await _loadTab(idx);
       }
       return;
     }
@@ -61,13 +65,10 @@ class _ChairmanDashboardScreenState extends State<ChairmanDashboardScreen>
 
   Future<void> _refresh(VsuiteInstance instance) async {
     _loaded.remove(instance.id);
-    final instProvider = context.read<InstanceProvider>();
-    final docProvider  = context.read<DocumentProvider>();
-    final token = await instProvider.getToken(instance);
-    if (token == null) return;
-    await docProvider.loadForInstance(instance, token);
-    _loaded[instance.id] = true;
+    final idx = context.read<InstanceProvider>().instances.indexWhere((i) => i.id == instance.id);
+    await _loadTab(idx < 0 ? 0 : idx);
   }
+
 
   @override
   void dispose() {
@@ -254,6 +255,21 @@ class _InstanceTab extends StatelessWidget {
             delegate: SliverChildBuilderDelegate(
               (ctx, i) => _DocTile(doc: ds.completed[i], instance: instance, isCompleted: true),
               childCount: ds.completed.take(10).length,
+            ),
+          ),
+        // My documents header
+        if (ds.myDocuments.isNotEmpty)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Text('My Submitted Documents', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textDark)),
+            ),
+          ),
+        if (ds.myDocuments.isNotEmpty)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => _DocTile(doc: ds.myDocuments[i], instance: instance, isCompleted: false),
+              childCount: ds.myDocuments.take(10).length,
             ),
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 32)),

@@ -95,6 +95,11 @@ class InstanceProvider extends ChangeNotifier {
     return await _store.loadRole(inst.id) ?? 'Staff';
   }
 
+  /// Returns the stored role for a specific instance (defaults to 'Staff').
+  Future<String> getRole(VsuiteInstance instance) async {
+    return await _store.loadRole(instance.id) ?? 'Staff';
+  }
+
   // ── Auth check (does any instance exist?) ─────────────────────────────────
 
   bool get hasInstances => _instances.isNotEmpty;

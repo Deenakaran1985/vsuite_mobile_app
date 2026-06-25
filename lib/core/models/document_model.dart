@@ -90,7 +90,7 @@ class DocumentModel {
 
   // True when the document is not in a terminal state — i.e. the current user
   // can still act on it (approve / reject / hold / comment).
-  bool get isAtChairmanStage {
+  bool get isActionable {
     const terminal = ['Completed', 'Closed', 'Rejected', 'Fully Approved'];
     return !isFullyApproved &&
         !terminal.any((s) => (status ?? '').toLowerCase().contains(s.toLowerCase()));

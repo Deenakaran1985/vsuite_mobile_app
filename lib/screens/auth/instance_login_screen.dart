@@ -60,7 +60,7 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/role-dashboard');
+      Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       Fluttertoast.showToast(
         msg: result['message'] as String? ?? 'Login failed',
@@ -115,13 +115,14 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _emailCtl,
-                            keyboardType: TextInputType.emailAddress,
+                            keyboardType: TextInputType.text,
                             decoration: const InputDecoration(
-                              labelText: 'Email',
-                              prefixIcon: Icon(Icons.email_outlined),
+                              labelText: 'Username',
+                              hintText: 'username or email',
+                              prefixIcon: Icon(Icons.person_outline),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Username is required' : null,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

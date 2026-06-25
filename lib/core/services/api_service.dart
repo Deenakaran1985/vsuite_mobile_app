@@ -238,6 +238,29 @@ class ApiService {
   Future<Map<String, dynamic>> comment(VsuiteInstance instance, String token, int docId, String message) =>
       _post(instance, token, '/api/v1/documents/$docId/comment', {'message': message});
 
+  Future<Map<String, dynamic>> generalApprove(VsuiteInstance instance, String token, int docId, Map<String, dynamic> payload) =>
+      _post(instance, token, '/api/v1/documents/$docId/approve', payload);
+
+  Future<Map<String, dynamic>> noted(VsuiteInstance instance, String token, int docId, String message) =>
+      _post(instance, token, '/api/v1/documents/$docId/noted', {'message': message});
+
+  Future<Map<String, dynamic>> discuss(VsuiteInstance instance, String token, int docId, String message) =>
+      _post(instance, token, '/api/v1/documents/$docId/discuss', {'message': message});
+
+  Future<Map<String, dynamic>> forward(VsuiteInstance instance, String token, int docId, String forwardTo, String message) =>
+      _post(instance, token, '/api/v1/documents/$docId/forward', {'forward_to': forwardTo, 'message': message});
+
+  Future<Map<String, dynamic>> complete(VsuiteInstance instance, String token, int docId, String message) =>
+      _post(instance, token, '/api/v1/documents/$docId/complete', {'message': message});
+
+  Future<List<DocumentModel>> getMyDocuments(VsuiteInstance instance, String token, {int perPage = 20}) async {
+    final data = await _get(instance, token, '/api/v1/documents/my', params: {'per_page': perPage});
+    if (data == null) return [];
+    final list = data['data'];
+    if (list is! List) return [];
+    return list.map((e) => DocumentModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   // ── Internals ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> _get(VsuiteInstance instance, String token, String path, {Map<String, dynamic>? params}) async {

@@ -73,7 +73,7 @@ class AppSelectionScreen extends StatelessWidget {
                 _AppCard(
                   logo: 'assets/images/logo1.jpg',
                   title: 'V-Suite (VIMW)',
-                  subtitle: 'Document Approval & Chairman Actions',
+                  subtitle: 'Document Approval & Workflow Actions',
                   serverLabel: 'http://14.139.184.39:8101',
                   badgeLabel: instance.hasInstances
                       ? '${instance.instances.length} instance${instance.instances.length > 1 ? 's' : ''} configured'

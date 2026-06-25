@@ -19,14 +19,21 @@ class DocumentDetailScreen extends StatefulWidget {
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   DocumentModel? _doc;
-  bool _loadingDetail = false;
-  bool _acting        = false;
+  bool   _loadingDetail = false;
+  bool   _acting        = false;
+  String _role          = 'Staff';
 
   @override
   void initState() {
     super.initState();
     _doc = widget.doc;
     _fetchDetail();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await context.read<InstanceProvider>().getRole(widget.instance);
+    if (mounted) setState(() => _role = role);
   }
 
   Future<void> _fetchDetail() async {
@@ -55,10 +62,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     final result = await action(token);
     setState(() => _acting = false);
     _toast(result['message'] ?? 'Done', isError: result['success'] != true);
-    if (result['success'] == true) {
-      await _fetchDetail();
-      // Invalidate dashboard cache
-    }
+    if (result['success'] == true) await _fetchDetail();
   }
 
   void _toast(String msg, {bool isError = false}) {
@@ -70,9 +74,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
+  bool get _isChairman => _role == 'Chairman';
+  bool get _isStaff    => _role == 'Staff';
+
   // ── Action sheets ─────────────────────────────────────────────────────────
 
-  void _showApproveSheet() {
+  void _showChairmanApproveSheet() {
     final msgCtl   = TextEditingController();
     final recCtl   = TextEditingController(text: _doc?.recommendedAmount?.toString() ?? '');
     final sanCtl   = TextEditingController(text: _doc?.sanctionedAmount?.toString() ?? '');
@@ -86,7 +93,71 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
         child: StatefulBuilder(
-          builder: (ctx, setSt) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          builder: (ctx, setSt) => SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('Chairman Approve', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              const Divider(height: 20),
+              if (isPayment) ...[
+                Row(children: [
+                  Expanded(child: TextField(controller: recCtl, keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Recommended (₹)', isDense: true))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: sanCtl, keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Sanctioned (₹)', isDense: true))),
+                ]),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Finance Head (optional)', isDense: true),
+                  initialValue: finHead,
+                  items: const [
+                    DropdownMenuItem(value: null,                          child: Text('— System decides —')),
+                    DropdownMenuItem(value: 'Finance Head Salem',         child: Text('Finance Head Salem')),
+                    DropdownMenuItem(value: 'Finance Head Chennai',       child: Text('Finance Head Chennai')),
+                    DropdownMenuItem(value: 'Finance Head Karaikal',      child: Text('Finance Head Karaikal')),
+                    DropdownMenuItem(value: 'Finance Head Pondy',         child: Text('Finance Head Pondy')),
+                  ],
+                  onChanged: (v) => setSt(() => finHead = v),
+                ),
+                const SizedBox(height: 14),
+              ],
+              TextField(controller: msgCtl, decoration: const InputDecoration(labelText: 'Remarks (optional)', isDense: true), maxLines: 2),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  final payload = <String, dynamic>{};
+                  if (msgCtl.text.isNotEmpty) payload['message'] = msgCtl.text;
+                  if (finHead != null) payload['finance_head'] = finHead;
+                  if (recCtl.text.isNotEmpty) payload['recommended_amount'] = double.tryParse(recCtl.text);
+                  if (sanCtl.text.isNotEmpty) payload['sanctioned_amount']  = double.tryParse(sanCtl.text);
+                  _act((token) => context.read<DocumentProvider>().approve(widget.instance, token, widget.doc.id, payload));
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Confirm Approve'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+              ),
+              const SizedBox(height: 16),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showGeneralApproveSheet() {
+    final msgCtl = TextEditingController();
+    final recCtl = TextEditingController(text: _doc?.recommendedAmount?.toString() ?? '');
+    final sanCtl = TextEditingController(text: _doc?.sanctionedAmount?.toString() ?? '');
+    final isPayment = (_doc?.isPaymentInvolved ?? '') == 'Y';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Text('Approve Document', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const Divider(height: 20),
             if (isPayment) ...[
@@ -98,19 +169,6 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                     decoration: const InputDecoration(labelText: 'Sanctioned (₹)', isDense: true))),
               ]),
               const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Finance Head (optional)', isDense: true),
-                initialValue: finHead,
-                items: const [
-                  DropdownMenuItem(value: null,                          child: Text('— System decides —')),
-                  DropdownMenuItem(value: 'Finance Head Salem',         child: Text('Finance Head Salem')),
-                  DropdownMenuItem(value: 'Finance Head Chennai',       child: Text('Finance Head Chennai')),
-                  DropdownMenuItem(value: 'Finance Head Karaikal',      child: Text('Finance Head Karaikal')),
-                  DropdownMenuItem(value: 'Finance Head Pondy',         child: Text('Finance Head Pondy')),
-                ],
-                onChanged: (v) => setSt(() => finHead = v),
-              ),
-              const SizedBox(height: 14),
             ],
             TextField(controller: msgCtl, decoration: const InputDecoration(labelText: 'Remarks (optional)', isDense: true), maxLines: 2),
             const SizedBox(height: 16),
@@ -119,10 +177,9 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 Navigator.pop(ctx);
                 final payload = <String, dynamic>{};
                 if (msgCtl.text.isNotEmpty) payload['message'] = msgCtl.text;
-                if (finHead != null) payload['finance_head'] = finHead;
                 if (recCtl.text.isNotEmpty) payload['recommended_amount'] = double.tryParse(recCtl.text);
                 if (sanCtl.text.isNotEmpty) payload['sanctioned_amount']  = double.tryParse(sanCtl.text);
-                _act((token) => context.read<DocumentProvider>().approve(widget.instance, token, widget.doc.id, payload));
+                _act((token) => context.read<DocumentProvider>().generalApprove(widget.instance, token, widget.doc.id, payload));
               },
               icon: const Icon(Icons.check),
               label: const Text('Confirm Approve'),
@@ -135,14 +192,59 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
-  void _showRejectSheet()  => _showReasonSheet('Reject Document',  AppColors.danger,  'Rejection reason (required)',
+  void _showForwardSheet() {
+    final deptCtl = TextEditingController();
+    final msgCtl  = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('Forward Document', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          const Divider(height: 20),
+          TextField(
+            controller: deptCtl,
+            decoration: const InputDecoration(labelText: 'Forward to (Department)', isDense: true, prefixIcon: Icon(Icons.send)),
+          ),
+          const SizedBox(height: 14),
+          TextField(controller: msgCtl, maxLines: 2, decoration: const InputDecoration(hintText: 'Message (optional)', isDense: true)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.info),
+            onPressed: () {
+              if (deptCtl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              _act((token) => context.read<DocumentProvider>().forward(
+                    widget.instance, token, widget.doc.id, deptCtl.text.trim(), msgCtl.text.trim()));
+            },
+            icon: const Icon(Icons.send),
+            label: const Text('Forward'),
+          ),
+          const SizedBox(height: 16),
+        ]),
+      ),
+    );
+  }
+
+  void _showRejectSheet()  => _showReasonSheet('Reject Document',       AppColors.danger,  'Rejection reason (required)',
       (token, msg) => context.read<DocumentProvider>().reject(widget.instance, token, widget.doc.id, msg), required: true);
 
-  void _showHoldSheet()    => _showReasonSheet('Put on Hold',      AppColors.warning, 'Hold reason (required)',
+  void _showHoldSheet()    => _showReasonSheet('Put on Hold',           AppColors.warning, 'Hold reason (required)',
       (token, msg) => context.read<DocumentProvider>().hold(widget.instance, token, widget.doc.id, msg), required: true);
 
-  void _showCommentSheet() => _showReasonSheet('Add Comment',      AppColors.accent,  'Write a comment…',
+  void _showNotedSheet()   => _showReasonSheet('Mark as Noted',         AppColors.accent,  'Remarks (optional)',
+      (token, msg) => context.read<DocumentProvider>().noted(widget.instance, token, widget.doc.id, msg));
+
+  void _showDiscussSheet() => _showReasonSheet('Call for Discussion',   AppColors.info,    'Discussion reason (required)',
+      (token, msg) => context.read<DocumentProvider>().discuss(widget.instance, token, widget.doc.id, msg), required: true);
+
+  void _showCommentSheet() => _showReasonSheet('Add Comment',           AppColors.accent,  'Write a comment…',
       (token, msg) => context.read<DocumentProvider>().comment(widget.instance, token, widget.doc.id, msg));
+
+  void _showCompleteSheet() => _showReasonSheet('Complete Process',     AppColors.success, 'Completion remarks (optional)',
+      (token, msg) => context.read<DocumentProvider>().complete(widget.instance, token, widget.doc.id, msg));
 
   void _showReasonSheet(String title, Color color, String hint,
       Future<Map<String, dynamic>> Function(String, String) action, {bool required = false}) {
@@ -188,7 +290,22 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
         ),
         title: Text(doc.docId ?? 'Document', style: const TextStyle(fontSize: 15)),
         actions: [
-          if (_loadingDetail) const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))),
+          if (_role.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(_role, style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          if (_loadingDetail)
+            const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchDetail),
         ],
       ),
@@ -214,9 +331,9 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 const SizedBox(height: 10),
                 Text(doc.title ?? 'Untitled', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('From: ${doc.from ?? '—'}  ·  By: ${doc.createdBy ?? '—'}', style: TextStyle(color: Colors.white.withValues(alpha:0.7), fontSize: 12)),
+                Text('From: ${doc.from ?? '—'}  ·  By: ${doc.createdBy ?? '—'}', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
                 if (doc.createdAt != null)
-                  Text(DateFormat('dd MMM yyyy').format(doc.createdAt!), style: TextStyle(color: Colors.white.withValues(alpha:0.6), fontSize: 11)),
+                  Text(DateFormat('dd MMM yyyy').format(doc.createdAt!), style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
               ]),
             ),
             const SizedBox(height: 14),
@@ -262,7 +379,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               }),
             ]),
             const SizedBox(height: 14),
-            // ── Subject & description ────────────────────────────────────
+            // ── Subject ──────────────────────────────────────────────────
             if (doc.subject != null) ...[
               _card('Subject', [Text(doc.subject!, style: const TextStyle(fontSize: 14))]),
               const SizedBox(height: 14),
@@ -297,34 +414,28 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   ]),
                 )),
               ]),
-            const SizedBox(height: 100), // space for action bar
+            const SizedBox(height: 110),
           ]),
         ),
-        // ── Floating action bar ────────────────────────────────────────────
-        if (doc.isAtChairmanStage && !['Completed', 'Closed', 'Rejected'].contains(doc.status))
+        // ── Floating action bar — shown when document is actionable ──────
+        if (doc.isActionable && !['Completed', 'Closed', 'Rejected'].contains(doc.status))
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.1), blurRadius: 16, offset: const Offset(0, -4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))],
               ),
               child: _acting
                   ? const Center(child: CircularProgressIndicator())
-                  : Row(children: [
-                      Expanded(child: _actionBtn('Approve', AppColors.success, Icons.check, _showApproveSheet)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _actionBtn('Hold',    AppColors.warning, Icons.pause, _showHoldSheet)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _actionBtn('Reject',  AppColors.danger,  Icons.close, _showRejectSheet)),
-                    ]),
+                  : _buildActionBar(),
             ),
           ),
-        // Comment button (always visible)
+        // ── Comment FAB (always visible unless doc closed) ───────────────
         if (!['Completed', 'Closed'].contains(doc.status))
           Positioned(
-            bottom: doc.isAtChairmanStage ? 90 : 16,
+            bottom: (doc.isActionable && !['Completed', 'Closed', 'Rejected'].contains(doc.status)) ? 92 : 16,
             right: 16,
             child: FloatingActionButton.small(
               onPressed: _showCommentSheet,
@@ -336,13 +447,56 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
+  Widget _buildActionBar() {
+    if (_isChairman) {
+      return Row(children: [
+        Expanded(child: _actionBtn('Approve', AppColors.success, Icons.check, _showChairmanApproveSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Hold', AppColors.warning, Icons.pause, _showHoldSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Reject', AppColors.danger, Icons.close, _showRejectSheet)),
+      ]);
+    }
+
+    if (_isStaff) {
+      // Staff only gets Complete if the doc has gone through the full sequence
+      final doc = _doc ?? widget.doc;
+      final isCreatorAndDone = doc.isFullyApproved || doc.approvalProgressPct == 100;
+      if (isCreatorAndDone) {
+        return Row(children: [
+          Expanded(child: _actionBtn('Complete', AppColors.success, Icons.flag, _showCompleteSheet)),
+        ]);
+      }
+      return const SizedBox.shrink();
+    }
+
+    // HOD, Admin, SuperAdmin — full action bar
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
+        Expanded(child: _actionBtn('Approve', AppColors.success,  Icons.check,       _showGeneralApproveSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Hold',    AppColors.warning,  Icons.pause,       _showHoldSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Reject',  AppColors.danger,   Icons.close,       _showRejectSheet)),
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(child: _actionBtn('Noted',   AppColors.accent,   Icons.done_all,    _showNotedSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Discuss', AppColors.info,     Icons.forum,       _showDiscussSheet)),
+        const SizedBox(width: 8),
+        Expanded(child: _actionBtn('Forward', const Color(0xFF6A1B9A), Icons.send,   _showForwardSheet)),
+      ]),
+    ]);
+  }
+
   Widget _card(String title, List<Widget> children) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
-          textBaseline: TextBaseline.alphabetic, letterSpacing: 0.5, color: AppColors.accent)),
+          letterSpacing: 0.5, color: AppColors.accent)),
       const SizedBox(height: 12),
       ...children,
     ]),
@@ -356,12 +510,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
   Widget _pill(String text) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(color: Colors.white.withValues(alpha:0.2), borderRadius: BorderRadius.circular(20)),
+    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
     child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
   );
 
   Widget _statusPill(String? status) {
-    Color bg; String label = status ?? '—';
+    Color bg;
     if ((status ?? '').contains('Reject')) { bg = AppColors.danger.withValues(alpha: 0.3); }
     else if ((status ?? '').contains('Complet')) { bg = AppColors.success.withValues(alpha: 0.3); }
     else if ((status ?? '').contains('Hold')) { bg = AppColors.warning.withValues(alpha: 0.3); }
@@ -369,7 +523,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+      child: Text(status ?? '—', style: const TextStyle(color: Colors.white, fontSize: 11)),
     );
   }
 
@@ -390,8 +544,12 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Widget _actionBtn(String label, Color color, IconData icon, VoidCallback onTap) =>
     ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 16),
-      label: Text(label, style: const TextStyle(fontSize: 13)),
-      style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(vertical: 11)),
+      icon: Icon(icon, size: 15),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
 }

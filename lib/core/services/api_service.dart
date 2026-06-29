@@ -229,29 +229,29 @@ class ApiService {
   Future<Map<String, dynamic>> approve(VsuiteInstance instance, String token, int docId, Map<String, dynamic> payload) =>
       _post(instance, token, '/api/v1/documents/$docId/chairman-approve', payload);
 
-  Future<Map<String, dynamic>> reject(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/reject', {'message': message});
+  Future<Map<String, dynamic>> reject(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/reject', {'message': message, ...?extra});
 
-  Future<Map<String, dynamic>> hold(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/hold', {'message': message});
+  Future<Map<String, dynamic>> hold(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/hold', {'message': message, ...?extra});
 
-  Future<Map<String, dynamic>> comment(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/comment', {'message': message});
+  Future<Map<String, dynamic>> comment(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/comment', {'message': message, ...?extra});
 
   Future<Map<String, dynamic>> generalApprove(VsuiteInstance instance, String token, int docId, Map<String, dynamic> payload) =>
       _post(instance, token, '/api/v1/documents/$docId/approve', payload);
 
-  Future<Map<String, dynamic>> noted(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/noted', {'message': message});
+  Future<Map<String, dynamic>> noted(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/noted', {'message': message, ...?extra});
 
-  Future<Map<String, dynamic>> discuss(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/discuss', {'message': message});
+  Future<Map<String, dynamic>> discuss(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/discuss', {'message': message, ...?extra});
 
-  Future<Map<String, dynamic>> forward(VsuiteInstance instance, String token, int docId, String forwardTo, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/forward', {'forward_to': forwardTo, 'message': message});
+  Future<Map<String, dynamic>> forward(VsuiteInstance instance, String token, int docId, String forwardTo, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/forward', {'forward_to': forwardTo, 'message': message, ...?extra});
 
-  Future<Map<String, dynamic>> complete(VsuiteInstance instance, String token, int docId, String message) =>
-      _post(instance, token, '/api/v1/documents/$docId/complete', {'message': message});
+  Future<Map<String, dynamic>> complete(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _post(instance, token, '/api/v1/documents/$docId/complete', {'message': message, ...?extra});
 
   Future<List<DocumentModel>> getMyDocuments(VsuiteInstance instance, String token, {int perPage = 20}) async {
     final data = await _get(instance, token, '/api/v1/documents/my', params: {'per_page': perPage});

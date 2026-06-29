@@ -81,24 +81,24 @@ class DocumentProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> generalApprove(VsuiteInstance instance, String token, int docId, Map<String, dynamic> payload) =>
       _api.generalApprove(instance, token, docId, payload);
 
-  Future<Map<String, dynamic>> reject(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.reject(instance, token, docId, message);
+  Future<Map<String, dynamic>> reject(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.reject(instance, token, docId, message, extra: extra);
 
-  Future<Map<String, dynamic>> hold(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.hold(instance, token, docId, message);
+  Future<Map<String, dynamic>> hold(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.hold(instance, token, docId, message, extra: extra);
 
-  Future<Map<String, dynamic>> comment(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.comment(instance, token, docId, message);
+  Future<Map<String, dynamic>> comment(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.comment(instance, token, docId, message, extra: extra);
 
-  Future<Map<String, dynamic>> noted(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.noted(instance, token, docId, message);
+  Future<Map<String, dynamic>> noted(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.noted(instance, token, docId, message, extra: extra);
 
-  Future<Map<String, dynamic>> discuss(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.discuss(instance, token, docId, message);
+  Future<Map<String, dynamic>> discuss(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.discuss(instance, token, docId, message, extra: extra);
 
-  Future<Map<String, dynamic>> forward(VsuiteInstance instance, String token, int docId, String forwardTo, String message) =>
-      _api.forward(instance, token, docId, forwardTo, message);
+  Future<Map<String, dynamic>> forward(VsuiteInstance instance, String token, int docId, String forwardTo, String message, {Map<String, dynamic>? extra}) =>
+      _api.forward(instance, token, docId, forwardTo, message, extra: extra);
 
-  Future<Map<String, dynamic>> complete(VsuiteInstance instance, String token, int docId, String message) =>
-      _api.complete(instance, token, docId, message);
+  Future<Map<String, dynamic>> complete(VsuiteInstance instance, String token, int docId, String message, {Map<String, dynamic>? extra}) =>
+      _api.complete(instance, token, docId, message, extra: extra);
 }

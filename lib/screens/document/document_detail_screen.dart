@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../../core/models/document_model.dart';
 import '../../core/models/vsuite_instance.dart';
 import '../../core/providers/document_provider.dart';
 import '../../core/providers/instance_provider.dart';
+import '../../core/services/biometric_service.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
   final DocumentModel  doc;
@@ -51,15 +53,36 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Future<String?> _getToken() async =>
       context.read<InstanceProvider>().getToken(widget.instance);
 
-  Future<void> _act(Future<Map<String, dynamic>> Function(String token) action) async {
+  Future<void> _act(
+      Future<Map<String, dynamic>> Function(String token, Map<String, dynamic> extra) action) async {
+    // Biometric / PIN verification before any document action
+    final bio = BiometricService();
+    var bioVerified = false;
+    final platform = Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : 'unknown';
+
+    if (await bio.isAvailable()) {
+      bioVerified = await bio.authenticate(
+          reason: 'Verify your identity to perform this action');
+      if (!bioVerified) {
+        _toast('Authentication cancelled. No action taken.', isError: true);
+        return;
+      }
+    }
+
+    final extra = {
+      'biometric_verified': bioVerified,
+      'platform': platform,
+      'device_info': Platform.operatingSystemVersion,
+    };
+
     setState(() => _acting = true);
     final token = await _getToken();
     if (token == null) {
-      _toast('Authentication failed', isError: true);
+      _toast('Session expired. Please log in again.', isError: true);
       setState(() => _acting = false);
       return;
     }
-    final result = await action(token);
+    final result = await action(token, extra);
     setState(() => _acting = false);
     _toast(result['message'] ?? 'Done', isError: result['success'] != true);
     if (result['success'] == true) await _fetchDetail();
@@ -130,7 +153,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   if (finHead != null) payload['finance_head'] = finHead;
                   if (recCtl.text.isNotEmpty) payload['recommended_amount'] = double.tryParse(recCtl.text);
                   if (sanCtl.text.isNotEmpty) payload['sanctioned_amount']  = double.tryParse(sanCtl.text);
-                  _act((token) => context.read<DocumentProvider>().approve(widget.instance, token, widget.doc.id, payload));
+                  _act((token, extra) => context.read<DocumentProvider>().approve(
+                        widget.instance, token, widget.doc.id, {...payload, ...extra}));
                 },
                 icon: const Icon(Icons.check),
                 label: const Text('Confirm Approve'),
@@ -179,7 +203,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 if (msgCtl.text.isNotEmpty) payload['message'] = msgCtl.text;
                 if (recCtl.text.isNotEmpty) payload['recommended_amount'] = double.tryParse(recCtl.text);
                 if (sanCtl.text.isNotEmpty) payload['sanctioned_amount']  = double.tryParse(sanCtl.text);
-                _act((token) => context.read<DocumentProvider>().generalApprove(widget.instance, token, widget.doc.id, payload));
+                _act((token, extra) => context.read<DocumentProvider>().generalApprove(
+                      widget.instance, token, widget.doc.id, {...payload, ...extra}));
               },
               icon: const Icon(Icons.check),
               label: const Text('Confirm Approve'),
@@ -216,8 +241,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
             onPressed: () {
               if (deptCtl.text.trim().isEmpty) return;
               Navigator.pop(ctx);
-              _act((token) => context.read<DocumentProvider>().forward(
-                    widget.instance, token, widget.doc.id, deptCtl.text.trim(), msgCtl.text.trim()));
+              _act((token, extra) => context.read<DocumentProvider>().forward(
+                    widget.instance, token, widget.doc.id, deptCtl.text.trim(), msgCtl.text.trim(), extra: extra));
             },
             icon: const Icon(Icons.send),
             label: const Text('Forward'),
@@ -229,25 +254,25 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   }
 
   void _showRejectSheet()  => _showReasonSheet('Reject Document',       AppColors.danger,  'Rejection reason (required)',
-      (token, msg) => context.read<DocumentProvider>().reject(widget.instance, token, widget.doc.id, msg), required: true);
+      (token, msg, extra) => context.read<DocumentProvider>().reject(widget.instance, token, widget.doc.id, msg, extra: extra), required: true);
 
   void _showHoldSheet()    => _showReasonSheet('Put on Hold',           AppColors.warning, 'Hold reason (required)',
-      (token, msg) => context.read<DocumentProvider>().hold(widget.instance, token, widget.doc.id, msg), required: true);
+      (token, msg, extra) => context.read<DocumentProvider>().hold(widget.instance, token, widget.doc.id, msg, extra: extra), required: true);
 
   void _showNotedSheet()   => _showReasonSheet('Mark as Noted',         AppColors.accent,  'Remarks (optional)',
-      (token, msg) => context.read<DocumentProvider>().noted(widget.instance, token, widget.doc.id, msg));
+      (token, msg, extra) => context.read<DocumentProvider>().noted(widget.instance, token, widget.doc.id, msg, extra: extra));
 
   void _showDiscussSheet() => _showReasonSheet('Call for Discussion',   AppColors.info,    'Discussion reason (required)',
-      (token, msg) => context.read<DocumentProvider>().discuss(widget.instance, token, widget.doc.id, msg), required: true);
+      (token, msg, extra) => context.read<DocumentProvider>().discuss(widget.instance, token, widget.doc.id, msg, extra: extra), required: true);
 
   void _showCommentSheet() => _showReasonSheet('Add Comment',           AppColors.accent,  'Write a comment…',
-      (token, msg) => context.read<DocumentProvider>().comment(widget.instance, token, widget.doc.id, msg));
+      (token, msg, extra) => context.read<DocumentProvider>().comment(widget.instance, token, widget.doc.id, msg, extra: extra));
 
   void _showCompleteSheet() => _showReasonSheet('Complete Process',     AppColors.success, 'Completion remarks (optional)',
-      (token, msg) => context.read<DocumentProvider>().complete(widget.instance, token, widget.doc.id, msg));
+      (token, msg, extra) => context.read<DocumentProvider>().complete(widget.instance, token, widget.doc.id, msg, extra: extra));
 
   void _showReasonSheet(String title, Color color, String hint,
-      Future<Map<String, dynamic>> Function(String, String) action, {bool required = false}) {
+      Future<Map<String, dynamic>> Function(String, String, Map<String, dynamic>) action, {bool required = false}) {
     final ctl = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -265,7 +290,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
             onPressed: () {
               if (required && ctl.text.trim().isEmpty) return;
               Navigator.pop(ctx);
-              _act((token) => action(token, ctl.text.trim()));
+              _act((token, extra) => action(token, ctl.text.trim(), extra));
             },
             child: Text(title),
           ),

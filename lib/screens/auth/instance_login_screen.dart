@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/vsuite_instance.dart';
 import '../../core/providers/instance_provider.dart';
+import '../../core/providers/vmrfdu_provider.dart';
 
 /// Direct-login screen for a v-suite instance.
 /// Called when a saved instance has no cached Bearer token yet.
@@ -25,8 +26,11 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill email from saved instance if available
-    _emailCtl.text = widget.instance.email;
+    // Pre-fill from saved instance email; fall back to the vmrfdu logged-in user's email
+    final prefill = widget.instance.email.isNotEmpty
+        ? widget.instance.email
+        : context.read<VmrfduProvider>().user?['email'] as String? ?? '';
+    _emailCtl.text = prefill;
   }
 
   @override
@@ -40,32 +44,54 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    final api = context.read<InstanceProvider>().api;
-    final result = await api.instanceLogin(
-      instanceUrl: widget.instance.url,
-      email: _emailCtl.text.trim(),
-      password: _passCtl.text,
-    );
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-
-    if (result['success'] == true) {
-      final token = result['data']['token'] as String;
-      final role  = result['data']['user']['role'] as String? ?? 'Staff';
-
-      // Store token in instance provider
-      await context.read<InstanceProvider>().storeInstanceToken(
-        widget.instance.id, token, role,
+    try {
+      final api = context.read<InstanceProvider>().api;
+      final result = await api.instanceLogin(
+        instanceUrl: widget.instance.url,
+        email: _emailCtl.text.trim(),
+        password: _passCtl.text,
       );
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
+      setState(() => _loading = false);
+
+      if (result['success'] == true) {
+        final data  = result['data'] as Map<String, dynamic>? ?? {};
+        final token = data['token'] as String? ?? '';
+        final role  = (data['user'] as Map<String, dynamic>?)?['role'] as String? ?? 'Staff';
+
+        if (token.isEmpty) {
+          Fluttertoast.showToast(
+            msg: 'Login succeeded but no token received. Contact admin.',
+            backgroundColor: AppColors.danger,
+            textColor: Colors.white,
+            toastLength: Toast.LENGTH_LONG,
+          );
+          return;
+        }
+
+        await context.read<InstanceProvider>().storeInstanceToken(
+          widget.instance.id, token, role,
+        );
+
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        Fluttertoast.showToast(
+          msg: result['message'] as String? ?? 'Login failed',
+          backgroundColor: AppColors.danger,
+          textColor: Colors.white,
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
       Fluttertoast.showToast(
-        msg: result['message'] as String? ?? 'Login failed',
+        msg: 'Connection error. Check that the server is reachable.',
         backgroundColor: AppColors.danger,
         textColor: Colors.white,
+        toastLength: Toast.LENGTH_LONG,
       );
     }
   }
@@ -112,17 +138,22 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Text('Sign In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Use your V-Suite credentials for this instance',
+                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _emailCtl,
-                            keyboardType: TextInputType.text,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
-                              labelText: 'Username',
-                              hintText: 'username or email',
+                              labelText: 'Email / Username',
+                              hintText: 'email or username',
                               prefixIcon: Icon(Icons.person_outline),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Username is required' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Email or username is required' : null,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -151,6 +182,11 @@ class _InstanceLoginScreenState extends State<InstanceLoginScreen> {
                             child: _loading
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                                 : const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _loading ? null : () => Navigator.pop(context),
+                            child: const Text('← Back'),
                           ),
                         ],
                       ),

@@ -29,21 +29,33 @@ class _VmrfduLoginScreenState extends State<VmrfduLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
-    final result = await context.read<VmrfduProvider>().login(
-      _emailCtl.text.trim(),
-      _passCtl.text,
-    );
+    try {
+      final result = await context.read<VmrfduProvider>().login(
+        _emailCtl.text.trim(),
+        _passCtl.text,
+      );
 
-    if (!mounted) return;
-    setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
 
-    if (result['success'] == true) {
-      Navigator.pushReplacementNamed(context, '/vmrfdu-dashboard');
-    } else {
+      if (result['success'] == true) {
+        Navigator.pushReplacementNamed(context, '/vmrfdu-dashboard');
+      } else {
+        Fluttertoast.showToast(
+          msg: result['message'] as String? ?? 'Login failed',
+          backgroundColor: AppColors.danger,
+          textColor: Colors.white,
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
       Fluttertoast.showToast(
-        msg: result['message'] as String? ?? 'Login failed',
+        msg: 'Login error. Please try again.',
         backgroundColor: AppColors.danger,
         textColor: Colors.white,
+        toastLength: Toast.LENGTH_LONG,
       );
     }
   }

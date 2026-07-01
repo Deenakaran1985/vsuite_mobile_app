@@ -51,7 +51,8 @@ class VmrfduProvider extends ChangeNotifier {
       final raw = result['instances'];
       if (raw is List) {
         _instances = raw
-            .map((e) => VsuiteInstance.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map((e) => VsuiteInstance.fromJson(e))
             .toList();
       }
 

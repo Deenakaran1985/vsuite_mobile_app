@@ -18,10 +18,10 @@ class VsuiteInstance {
   };
 
   factory VsuiteInstance.fromJson(Map<String, dynamic> j) => VsuiteInstance(
-    id: j['id'] as String,
-    label: j['label'] as String,
-    url: j['url'] as String,
-    email: j['email'] as String,
+    id: (j['id'] ?? '').toString(),
+    label: j['label'] as String? ?? '',
+    url: j['url'] as String? ?? '',
+    email: j['email'] as String? ?? '',
   );
 
   VsuiteInstance copyWith({String? label, String? url, String? email}) => VsuiteInstance(
